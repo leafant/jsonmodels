@@ -1,7 +1,7 @@
 import pytest
 
-from jsonmodels import models, fields, validators, errors, builders
-from jsonmodels.utilities import compare_schemas
+from jsonmodels_qdyk import models, fields, validators, errors, builders
+from jsonmodels_qdyk.utilities import compare_schemas
 
 from .utilities import get_fixture
 

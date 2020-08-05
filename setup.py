@@ -4,12 +4,12 @@ import os
 import sys
 
 from setuptools.command.test import test as TestCommand
-from jsonmodels import __version__, __author__, __email__
+from jsonmodels_qdyk import __version__, __author__, __email__
 
 from setuptools import setup
 
 
-PROJECT_NAME = 'jsonmodels'
+PROJECT_NAME = 'jsonmodels_qdyk'
 
 if sys.argv[-1] == 'publish':
     os.system('python setup.py sdist upload')
@@ -60,7 +60,7 @@ setup(
     long_description=readme + '\n\n' + history,
     author=__author__,
     author_email=__email__,
-    url='https://github.com/beregond/jsonmodels',
+    url='https://github.com/leafant/jsonmodels_qdyk',
     packages=[
         PROJECT_NAME,
     ],

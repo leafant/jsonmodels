@@ -1,4 +1,4 @@
-from jsonmodels import models, fields
+from jsonmodels_qdyk import models, fields
 
 
 def test_bool_field():

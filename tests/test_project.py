@@ -8,7 +8,7 @@ from invoke import run
 import tests
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-source_dir = os.path.join(root_dir, 'jsonmodels')
+source_dir = os.path.join(root_dir, 'jsonmodels_qdyk')
 tests_dir = os.path.join(root_dir, 'tests')
 
 

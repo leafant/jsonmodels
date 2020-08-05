@@ -1,5 +1,5 @@
-from jsonmodels.fields import StringField, ListField, EmbeddedField
-from jsonmodels.models import Base
+from jsonmodels_qdyk.fields import StringField, ListField, EmbeddedField
+from jsonmodels_qdyk.models import Base
 
 
 class Nullable(Base):

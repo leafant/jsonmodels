@@ -2,7 +2,7 @@ import pytest
 import six
 import datetime
 
-from jsonmodels import models, fields, errors
+from jsonmodels_qdyk import models, fields, errors
 
 
 def test_initialization():

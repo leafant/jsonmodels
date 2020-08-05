@@ -1,10 +1,14 @@
 import datetime
+import inspect
+import random
 import re
 from weakref import WeakKeyDictionary
 
 import six
 from dateutil.parser import parse
 
+from jsonmodels_qdyk import models
+from jsonmodels_qdyk.base_data_convert_2_bytes import base_to_bytes
 from .errors import ValidationError
 from .collections import ModelCollection
 
@@ -20,6 +24,10 @@ class BaseField(object):
 
     types = None
 
+    # add by gloria. 0表示随机值，1是最大值，-1最小值
+    global default_value_type
+    default_value_type = None
+
     def __init__(
             self,
             required=False,
@@ -27,13 +35,36 @@ class BaseField(object):
             help_text=None,
             validators=None,
             default=NotSet,
-            name=None):
+            name=None,
+
+            # add by gloria
+            min_value=None,
+            max_value=None,
+            default_value=None,
+            pack_to_type=None,
+            byte_value=None,
+            hex_value=None,
+            is_little_endian=False
+        ):
         self.memory = WeakKeyDictionary()
         self.required = required
         self.help_text = help_text
         self.nullable = nullable
         self._assign_validators(validators)
         self.name = name
+
+        # add by gloria
+        self.max_value = max_value
+        # add by gloria
+        self.min_value = min_value
+
+        self.default_value = default_value
+        # add by gloria
+        self.pack_to_type = pack_to_type
+        self.byte_value = byte_value
+        self.hex_value = hex_value
+        self.is_little_endian = is_little_endian
+
         self._validate_name()
         if default is not NotSet:
             self.validate(default)
@@ -49,10 +80,14 @@ class BaseField(object):
         self.validators = validators or []
 
     def __set__(self, instance, value):
-        self._finish_initialization(type(instance))
-        value = self.parse_value(value)
-        self.validate(value)
-        self.memory[instance._cache_key] = value
+        if models.Base in inspect.getmro(type(value)):
+            self.memory[instance._cache_key] = value
+        else:
+            self._finish_initialization(type(instance))
+            value = self.parse_value(value)
+            self.validate(value)
+            self.memory[instance._cache_key] = value
+            self.to_bytes(instance)
 
     def __get__(self, instance, owner=None):
         if instance is None:
@@ -100,10 +135,47 @@ class BaseField(object):
                 'Field "{type}" is not usable, try '
                 'different field type.'.format(type=type(self).__name__))
 
+    # add by gloria
+    def _check_value_range(self, value):
+        if value is not NotSet and not isinstance(value, str):
+            if self.required and (not value):
+                raise ValidationError(
+                    'Field value "{default}" is None.'.format(default=str(value)))
+            if (not self.required) and (not value):
+                return
+            if self.max_value:
+                if value > self.max_value:
+                    raise ValidationError(
+                        'Field value "{default}" is larger than it\'s max value {max_value}'
+                            .format(default=str(value), max_value=str(self.max_value)))
+            if self.min_value:
+                if value < self.min_value:
+                    raise ValidationError(
+                        'Field  value "{default}" is smaller than it\'s min value {min_value}'
+                            .format(default=str(value), min_value=str(self.min_value)))
+
+    # add by gloria
+    def to_bytes(self, instance):
+        """
+        get the bytes of current filed value.
+        the value of self.pack_to_type is "FLOATSTRING","FLOATDOUBLE","FLOAT","BOOL","BYTE", "STRING", "WORD", "DWORD", "INT","BYTESDECIMAL"
+        :return:
+        """
+        if self.pack_to_type:
+            value = self.__get__(instance)
+
+            if (value is None) or value == '':
+                self.byte_value = ''
+            else:
+                self.byte_value = base_to_bytes(self.pack_to_type, value, self.is_little_endian)
+        else:
+            print('Error!!!, self.pack_to_type is None, please init it in model *.py files')
+
     def to_struct(self, value):
         """Cast value to Python structure."""
         return value
 
+    # Edit by gloria
     def parse_value(self, value):
         """Parse value from primitive to desired format.
 
@@ -111,7 +183,26 @@ class BaseField(object):
         int).
 
         """
-        return value
+        if (value is NotSet) or (default_value_type is None):
+            return value
+        else:
+            # 字符类型使用默认值
+            if isinstance(value, str):
+                return self.default_value
+            # 数值类属根据取值范围计算随机值。
+            else:
+                if 0 == default_value_type:
+                    if self.default_value != '' or self.default_value is not None:
+                        return self.default_value
+                    else:
+                        return random.uniform(self.min_value, self.max_value)
+                elif 1 == default_value_type:
+                    return self.max_value
+                elif -1 == default_value_type:
+                    return self.min_value
+                else:
+                    raise Exception(
+                        'The value of default_value_type is wrong, please use vaues in list [-1, 0, 1, None]')
 
     def _validate_with_custom_validators(self, value):
         if value is None and self.nullable:

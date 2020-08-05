@@ -2,8 +2,8 @@ import platform
 
 from pytest import mark
 
-from jsonmodels.fields import StringField
-from jsonmodels.models import Base
+from jsonmodels_qdyk.fields import StringField
+from jsonmodels_qdyk.models import Base
 
 
 class User(Base):

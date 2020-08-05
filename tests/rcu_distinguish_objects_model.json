@@ -1,0 +1,25 @@
+{
+	"deviceType": 30634,
+	"rcuId": "",
+	"deviceId": "",
+	"timestamp": 1546404611544,
+	"targets": [{
+      "uuid": "6766980D70084C799527882FBA4B75EF",
+      "C": 111,
+      "P_x": 1293,
+      "P_y": 660,
+      "P_w": 1270,
+      "P_h": 39,
+      "L": 2,
+      "Xr": 112,
+      "Yr": 91,
+      "V": 32,
+      "longitude": 116.12345678,
+      "Latitude": 31.12345678,
+      "length": 50,
+      "width": 34,
+      "hei": 180,
+      "S": 1,
+      "heading": 87.123
+    }]
+}

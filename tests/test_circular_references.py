@@ -1,5 +1,5 @@
-from jsonmodels import models, fields
-from jsonmodels.utilities import compare_schemas
+from jsonmodels_qdyk import models, fields
+from jsonmodels_qdyk.utilities import compare_schemas
 
 from .utilities import get_fixture
 

@@ -2,7 +2,7 @@ import re
 
 import pytest
 
-from jsonmodels import utilities
+from jsonmodels_qdyk import utilities
 
 
 def test_allowed_types():

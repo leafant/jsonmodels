@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from jsonmodels import models, fields, errors
+from jsonmodels_qdyk import models, fields, errors
 
 
 class _DateField(fields.BaseField):

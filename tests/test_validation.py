@@ -2,7 +2,7 @@
 
 import pytest
 
-from jsonmodels import models, fields, validators, errors
+from jsonmodels_qdyk import models, fields, validators, errors
 
 
 class FakeValidator(object):

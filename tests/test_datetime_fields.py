@@ -3,7 +3,7 @@ import datetime
 import pytest
 from dateutil.tz import tzoffset
 
-from jsonmodels import models, fields
+from jsonmodels_qdyk import models, fields
 
 
 class _TestCet(datetime.tzinfo):
