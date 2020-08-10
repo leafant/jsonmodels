@@ -176,8 +176,24 @@ def bytes_to_decimal_bytes(bytes_decimal_str, is_little_endian=False):
         h_str = hex(int(byte_str))
         hex_list.append(h_str[2:].zfill(2))
     byte_str = bytes.fromhex(''.join(hex_list))
-    print(byte_str)
+    # print(byte_str)
     return byte_str
+
+
+def unsigned_int_2_bytes(value, is_little_endian=False):
+    # 小端数据返回
+    if is_little_endian:
+        return struct.pack('<I', value)
+    # 大端数据返回
+    return struct.pack('>I', value)
+
+
+def unsigned_long_2_bytes(value,  is_little_endian=False):
+    # 小端数据返回
+    if is_little_endian:
+        return struct.pack('<Q', value)
+    # 大端数据返回
+    return struct.pack('>Q', value)
 
 
 def none_data_type(value, is_little_endian=False):
@@ -204,7 +220,10 @@ data_to_bytes_methods = {"FLOATSTRING": float_string_2_bytes,
                          "DWORD": dword_2_bytes,
                          "INT": int_2_bytes,
                          "LONG": long_2_bytes,
-                         "BYTESDECIMAL": bytes_to_decimal_bytes}
+                         "BYTESDECIMAL": bytes_to_decimal_bytes,
+                         "UNSIGNEDINT": unsigned_int_2_bytes,
+                         "TIMESTAMP": unsigned_long_2_bytes
+                         }
 
 
 def base_to_bytes(data_type, value, is_little_endian=False):

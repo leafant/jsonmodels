@@ -61,10 +61,12 @@ class BaseField(object):
         self.default_value = default_value
         # add by gloria
         self.pack_to_type = pack_to_type
-        self.byte_value = byte_value
-        self.hex_value = hex_value
         self.is_little_endian = is_little_endian
-
+        if default_value:
+            self.byte_value = base_to_bytes(self.pack_to_type, default_value, self.is_little_endian)
+        else:
+            self.byte_value = byte_value
+        self.hex_value = hex_value
         self._validate_name()
         if default is not NotSet:
             self.validate(default)
@@ -80,7 +82,7 @@ class BaseField(object):
         self.validators = validators or []
 
     def __set__(self, instance, value):
-        if models.Base in inspect.getmro(type(value)):
+        if models.Base in inspect.getmro(type(value)) or (type(value) is list):
             self.memory[instance._cache_key] = value
         else:
             self._finish_initialization(type(instance))

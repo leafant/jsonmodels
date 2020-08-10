@@ -134,6 +134,7 @@ def test_rcu_data_to_queue():
     """
     dis_objects = rcu_distinguish_objects_model.rcu_distinguish_objects
     dis_objects.load_from_json_file()
+    dtype = dis_objects.get_field_bytes('deviceType')
     dis_objects.targets.clear()
     uuid_s = str(uuid.uuid4()).replace('-', '')
 
@@ -162,6 +163,7 @@ def test_rcu_data_to_queue():
     now_time = int(round(t * 1000))
     dis_objects.timestamp = now_time
     print('原始数据时间：{0}'.format(now_time))
+    a = dis_objects.targets
     dis_objects.targets.append(tem_obj)
     tcp_rcu_payload = assemble_single_rcu_perception_object_result2(dis_objects, is_little_end=True)
     print(tcp_rcu_payload)

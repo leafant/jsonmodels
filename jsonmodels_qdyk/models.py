@@ -1,6 +1,5 @@
 
 import json
-
 import six
 
 from . import parsers, errors
@@ -36,6 +35,7 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
         self._cache_key = _CacheKey()
         self.populate(**kwargs)
         self.json_file = json_file
+        self.load_default_values()
 
     def populate(self, **values):
         """Populate values to fields. Skip non-existing."""
@@ -123,11 +123,13 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
                 # 若属性是列表类型
                 if type(field[1]) is ListField:
                     item_type = field[1].items_types
+                    tem_list = list()
                     for i, list_obj in enumerate(item_type):
                         obj_item = list_obj()
                         obj_item.load_json_model(json_dict[field[0]][i])
-                        setattr(self, field[0], obj_item)
-                    print('field: {} is a ListField'.format(field))
+                        tem_list.append(obj_item)
+                    setattr(self, field[0], tem_list)
+                    # print('field: {} is a ListField'.format(field))
                     continue
                 # 若属性是model类型
                 if type(field[1]) is EmbeddedField:
@@ -135,12 +137,49 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
                     obj_item = obj_item_type()
                     obj_item.load_json_model(json_dict[field[0]])
                     setattr(self, field[0], obj_item)
-                    print('field:{} is a Embedded Field'.format(field))
+                    # print('field:{} is a Embedded Field'.format(field))
                     continue
                 # 其余则属性是值类型的
                 else:
                     setattr(self, field[0], json_dict[field[0]])
-                    print('field:{} is a value Field'.format(field))
+                    # print('field:{} is a value Field'.format(field))
+
+    # add by gloria
+    def load_default_values(self):
+        """
+        loading the default values for all fields.
+        :return: None
+        """
+        if not isinstance(self, Base):
+            raise Exception('The parameter item is not a json model')
+
+        for attr, field in enumerate(self):
+            # 具有默认值。
+            if field[1].default_value is not None:
+                setattr(self, field[0], field[1].default_value)
+            else:
+                # 若属性是列表类型
+                if type(field[1]) is ListField:
+                    item_type = field[1].items_types
+                    tem_list = list()
+                    for i, list_obj in enumerate(item_type):
+                        obj_item = list_obj()
+                        obj_item.load_default_values()
+                        tem_list.append(obj_item)
+                    setattr(self, field[0], tem_list)
+                    # print('load_default_values, field: {} is a ListField'.format(field))
+                    continue
+                # 若属性是model类型
+                if type(field[1]) is EmbeddedField:
+                    obj_item_type = field[1].types[0]
+                    obj_item = obj_item_type()
+                    obj_item.load_default_values()
+                    setattr(self, field[0], obj_item)
+                    # print('load_default_values, field:{} is a Embedded Field'.format(field))
+                    continue
+                # 其余值类型的，但没有默认值
+                else:
+                    print('!!!Warning, load_default_values, please set default value for field: {}'.format(field))
 
     # add by gloria
     def get_field_bytes(self, field_name):
