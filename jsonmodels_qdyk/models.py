@@ -122,6 +122,10 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
             else:
                 # 若属性是列表类型
                 if type(field[1]) is ListField:
+                    # 如果列表是空列表
+                    if len(json_dict[field[0]]) == 0:
+                        setattr(self, field[0], [])
+                        continue
                     item_type = field[1].items_types
                     tem_list = list()
                     for i, list_obj in enumerate(item_type):
