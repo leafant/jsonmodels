@@ -167,11 +167,15 @@ class BaseField(object):
             value = self.__get__(instance)
 
             if (value is None) or value == '':
-                self.byte_value = ''
+                self.byte_value = b''
             else:
                 self.byte_value = base_to_bytes(self.pack_to_type, value, self.is_little_endian)
-        else:
-            print('Error!!!, self.pack_to_type is None, please init it in model *.py files')
+        # else:
+        #     print('Warning!!!, self.pack_to_type is None, please init it in model *.py files')
+
+    # add by gloria
+    def bytes_str(self, parent_json_model):
+        return self.cached_bytes[parent_json_model._cache_key]
 
     def to_struct(self, value):
         """Cast value to Python structure."""

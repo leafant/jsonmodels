@@ -117,14 +117,23 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
 
         for attr, field in enumerate(self):
             # 如果对象本身有默认值，将使用类中的值。如果json文件中有值，将以json文件中的值为主。
-            if field[1].default_value is not None:
-                setattr(self, field[0], field[1].default_value)
+            if field[0] not in json_dict.keys() or json_dict[field[0]] == "":
+                if field[1].default_value is not None:
+                    setattr(self, field[0], field[1].default_value)
+                else:
+                    print('This attribute:{} not been set default value both in model class and json file.'.format(field))
             else:
                 # 若属性是列表类型
                 if type(field[1]) is ListField:
                     # 如果列表是空列表
                     if len(json_dict[field[0]]) == 0:
                         setattr(self, field[0], [])
+                        continue
+                    # 如果是值类型的数组：
+                    # 如果是值类型的数组：
+                    if (isinstance(json_dict[field[0]][0], int) or isinstance(json_dict[field[0]][0], float)
+                            or isinstance(json_dict[field[0]][0], str)):
+                        setattr(self, field[0], json_dict[field[0]])
                         continue
                     item_type = field[1].items_types
                     tem_list = list()
@@ -182,8 +191,8 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
                     # print('load_default_values, field:{} is a Embedded Field'.format(field))
                     continue
                 # 其余值类型的，但没有默认值
-                else:
-                    print('!!!Warning, load_default_values, please set default value for field: {}'.format(field))
+                # else:
+                #     print('!!!Warning, load_default_values, please set default value for field: {}'.format(field))
 
     # add by gloria
     def get_field_bytes(self, field_name):
@@ -194,7 +203,7 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
         """
         for attr_name, field in self:
             if field_name == attr_name:
-                return field.byte_value
+                return field.bytes_str(self)
 
     # @classmethod
     # def obj_to_bytes(cls, model_obj):

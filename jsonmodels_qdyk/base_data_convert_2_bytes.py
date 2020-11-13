@@ -16,7 +16,6 @@ def string_2_bytes(string_value, is_little_endian=False):
     :param is_little_endian:
     :return:
     """
-    print('string value:{}'.format(string_value))
     b = bytes(string_value, encoding='utf-8')
     # str_temp = ''
     # for c in string_value:
