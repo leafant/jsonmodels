@@ -46,6 +46,9 @@ class BaseField(object):
             hex_value=None,
             is_little_endian=False
         ):
+        # cached_bytes add by gloria
+        self.cached_bytes = WeakKeyDictionary()
+        
         self.memory = WeakKeyDictionary()
         self.required = required
         self.help_text = help_text
