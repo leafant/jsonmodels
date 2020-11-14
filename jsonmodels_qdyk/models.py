@@ -130,19 +130,17 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
                         setattr(self, field[0], [])
                         continue
                     # 如果是值类型的数组：
-                    # 如果是值类型的数组：
                     if (isinstance(json_dict[field[0]][0], int) or isinstance(json_dict[field[0]][0], float)
                             or isinstance(json_dict[field[0]][0], str)):
                         setattr(self, field[0], json_dict[field[0]])
                         continue
-                    item_type = field[1].items_types
-                    tem_list = list()
-                    for i, list_obj in enumerate(item_type):
-                        obj_item = list_obj()
-                        obj_item.load_json_model(json_dict[field[0]][i])
-                        tem_list.append(obj_item)
-                    setattr(self, field[0], tem_list)
-                    # print('field: {} is a ListField'.format(field))
+                    item_type = field[1].items_types[0]
+                    list_obj_list = list()
+                    for list_obj in json_dict[field[0]]:
+                        obj_item = item_type()
+                        obj_item.load_json_model(list_obj)
+                        list_obj_list.append(obj_item)
+                    setattr(self, field[0], list_obj_list)
                     continue
                 # 若属性是model类型
                 if type(field[1]) is EmbeddedField:
