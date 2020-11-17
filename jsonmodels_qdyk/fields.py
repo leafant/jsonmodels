@@ -44,11 +44,13 @@ class BaseField(object):
             pack_to_type=None,
             byte_value=None,
             hex_value=None,
-            is_little_endian=False
+            is_little_endian=False,
+            sequence = 0,
+            depending_field = None
         ):
         # cached_bytes add by gloria
         self.cached_bytes = WeakKeyDictionary()
-        
+
         self.memory = WeakKeyDictionary()
         self.required = required
         self.help_text = help_text
@@ -60,6 +62,11 @@ class BaseField(object):
         self.max_value = max_value
         # add by gloria
         self.min_value = min_value
+        # 用于表示属性的序列，打包bytes时需要。
+        self.sequence = sequence
+
+        # 当前field所依赖的field，如果依赖的filed 值 = 0 或None，则此field是无效的filed，不需打包成bytes。
+        self.depending_field = depending_field
 
         self.default_value = default_value
         # add by gloria
@@ -85,7 +92,24 @@ class BaseField(object):
         self.validators = validators or []
 
     def __set__(self, instance, value):
-        if models.Base in inspect.getmro(type(value)) or (type(value) is list):
+        # 去掉 object
+        ancestors = inspect.getmro(type(value))[:-1]
+        # 如果当前field是个列表
+        if type(value) is list:
+            self.memory[instance._cache_key] = value
+            tmp_bytes_list = list()
+            for list_item in value:
+                brother_classes = models.Base.__subclasses__()
+                c = type(list_item)
+                # 打包数据类型不是List，且不是models.Base的子类.这里只打包非引用类型的数据。如：str，int, float
+                if self.pack_to_type != 'LIST' and type(list_item) not in brother_classes:
+                    tmp_bytes = base_to_bytes(self.pack_to_type, list_item, self.is_little_endian)
+                    tmp_bytes_list.append(tmp_bytes)
+            if len(tmp_bytes_list) > 0:
+                self.byte_value = b''.join(tmp_bytes_list)
+
+        # 如果当前field是 jsonmodel，即EmbeddedField
+        elif models.Base in ancestors:
             self.memory[instance._cache_key] = value
         else:
             self._finish_initialization(type(instance))
@@ -93,6 +117,7 @@ class BaseField(object):
             self.validate(value)
             self.memory[instance._cache_key] = value
             self.to_bytes(instance)
+            self.cached_bytes[instance._cache_key] = self.byte_value
 
     def __get__(self, instance, owner=None):
         if instance is None:

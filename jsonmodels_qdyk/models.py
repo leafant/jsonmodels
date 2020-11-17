@@ -203,6 +203,59 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
             if field_name == attr_name:
                 return field.bytes_str(self)
 
+    # add by gloria
+    def get_obj_bytes(self):
+        """
+        将model中的所有属性，转换成一个长bytes。
+        :return:
+        """
+        # 用于存放各个按顺序的field对应的bytes。
+        temp_bytes_dict = dict()
+        temp_bytes = b''
+        for attr, field in enumerate(self):
+            # 判断是否有依赖的field
+            depended_field = field[1].depending_field
+            if depended_field:
+                depend = getattr(self, depended_field)
+                # 如果依赖的数据项的值是0或空，则此数据项将被排除。
+                if (not depend) or depend < 1:
+                    temp_bytes_dict[field[1].sequence] = b''
+                    continue
+
+            # 如果属性是列表
+            if type(field[1]) is ListField:
+                brother_classes = Base.__subclasses__()
+                list_items = getattr(self, field[0])
+                if len(list_items) == 0:
+                    temp_bytes_dict[field[1].sequence] = b''
+                # 如果列表中只是值属性,非json model属性
+                elif field[1].pack_to_type != 'LIST' and type(list_items[0]) not in brother_classes:
+                    temp_bytes_dict[field[1].sequence] = field[1].byte_value
+                # 如果列表中的内容是jsonmodel 属性。
+                else:
+                    tmp_bytes_list = list()
+                    for item in list_items:
+                        # 如果列表属性是json 对象时，
+                        tmp_bytes_list.append(item.get_obj_bytes())
+
+                    temp_bytes_dict[field[1].sequence] = b''.join(tmp_bytes_list)
+            # 如果属性是嵌入jsonmodel自定义对象
+            elif type(field[1]) is EmbeddedField:
+                embeded_field = getattr(self, field[0])
+                temp_bytes_dict[field[1].sequence] = embeded_field.get_obj_bytes()
+            # 如果属性是普通field对象
+            elif field[1].pack_to_type:
+                # print('开始处理filed:' + str(field[0]))
+                temp_bytes_dict[field[1].sequence] = field[1].byte_value
+            else:
+                print('!!!Warning: field:{} packe_to_type is none!'.format(field[0]))
+        dict_length = len(temp_bytes_dict)
+        i = 0
+        while i < dict_length:
+            temp_bytes += temp_bytes_dict[i]
+            i += 1
+        return temp_bytes
+
     # @classmethod
     # def obj_to_bytes(cls, model_obj):
     #     """
