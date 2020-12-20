@@ -30,12 +30,17 @@ class JsonmodelMeta(type):
 class Base(six.with_metaclass(JsonmodelMeta, object)):
 
     """Base class for all models."""
-
-    def __init__(self, json_file=None, **kwargs):
+    # 协议中的数据类型和数据版本
+    data_type = None
+    data_version = None
+    
+    def __init__(self, json_file=None,**kwargs):
         self._cache_key = _CacheKey()
         self.populate(**kwargs)
         self.json_file = json_file
         self.load_default_values()
+
+
 
     def populate(self, **values):
         """Populate values to fields. Skip non-existing."""
@@ -71,7 +76,6 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
                     "Error for field '{name}'.".format(name=name),
                     error,
                 )
-
     @classmethod
     def iterate_over_fields(cls):
         """Iterate through fields as `(attribute_name, field_instance)`."""
