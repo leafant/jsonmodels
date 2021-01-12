@@ -2,6 +2,7 @@
 import json
 import six
 
+from jsonmodels_qdyk import base_data_from_bytes
 from . import parsers, errors
 from .fields import BaseField, ListField, EmbeddedField
 from .errors import ValidationError
@@ -33,14 +34,14 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
     # 协议中的数据类型和数据版本
     data_type = None
     data_version = None
+    json_data_file = None
     
-    def __init__(self, json_file=None,**kwargs):
+    def __init__(self, json_file=None, length=None, **kwargs):
         self._cache_key = _CacheKey()
         self.populate(**kwargs)
         self.json_file = json_file
         self.load_default_values()
-
-
+        self.length = length
 
     def populate(self, **values):
         """Populate values to fields. Skip non-existing."""
@@ -61,6 +62,24 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
 
         raise errors.FieldNotFound('Field not found', field_name)
 
+    # add by gloria
+    def get_field_by_sequence(self, sequence_index):
+        """Get field associated with given sequence_index."""
+        for attr_name, field in enumerate(self):
+            if sequence_index == field[1].sequence:
+                return field
+
+        raise errors.FieldNotFound('Field not found', sequence_index)
+
+    # add by gloria
+    def set_field_by_sequence(self, sequence_index, value):
+        """Get field associated with given sequence_index."""
+        for attr_name, field in self:
+            if sequence_index == field.sequence:
+                setattr(self, field[0], value)
+
+        raise errors.FieldNotFound('Field not found', sequence_index)
+
     def __iter__(self):
         """Iterate through fields and values."""
         for name, field in self.iterate_over_fields():
@@ -76,6 +95,7 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
                     "Error for field '{name}'.".format(name=name),
                     error,
                 )
+
     @classmethod
     def iterate_over_fields(cls):
         """Iterate through fields as `(attribute_name, field_instance)`."""
@@ -287,9 +307,136 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
         从json文件中加载属性。
         :return:
         """
-        with open(self.json_file, "r", encoding='UTF-8') as f:
+        if self.json_data_file:
+            json_file_name = self.json_data_file
+        elif self.json_file:
+            json_file_name = self.json_file
+        else:
+            print('没有初始化json file')
+        with open(json_file_name, "r", encoding='UTF-8') as f:
             t = json.load(f)
         return self.load_json_model(t)
+
+    @classmethod
+    # add by gloria
+    def get_json_data_model(cls, data_type, data_version):
+        """
+        给定协议中特定数据类型和版本号，返回其对应的jsonmodel 实例。
+        :param data_type:
+        :param data_version:
+        :return:
+        """
+        json_models_base_classes = cls.__subclasses__()
+        for model_class in json_models_base_classes:
+            if model_class.data_type == data_type and model_class.data_version == data_version:
+                return model_class()
+
+        print('!!!WARNING:没有找到匹配的数据类型和其对应版本！')
+        raise Exception('ERROR：没有找到匹配的数据类型和其对应版本！')
+
+    @classmethod
+    def load_model_from_bytes(cls, data_type, data_version, bytes_str):
+        """
+        给定协议中特定数据类型和版本号，以及bytes string，返回解析后的json字典。
+        :param data_type: 协议中规定的数据类别
+        :param data_version:协议中规定的数据版本号
+        :param bytes_str: bytes字符串
+        :return: 跟协议数据结构一致的json字典。
+        """
+        target_json_model_instance = cls.get_json_data_model(data_type, data_version)
+        cls.load_from_bytes(target_json_model_instance, bytes_str)
+        return target_json_model_instance.to_struct()
+
+    @classmethod
+    # add by gloria
+    def load_from_bytes(cls, target_json_model_instance, bytes_str):
+        """
+        给定目标json model实例及bytes strng，返回解析后的json model实例。
+        :param target_json_model_instance: 协议中规定的数据类别
+        :param bytes_str: bytes字符串
+        :return: 跟协议数据结构一致的json字典。
+        """
+        if len(bytes_str) <= 0:
+            print('WARNING: The input parameters length is 0!')
+            return None
+        if target_json_model_instance.length:
+            if len(bytes_str) < target_json_model_instance.length:
+                print('WARNING: 输入bytes的长度小于即将被解析对象的最小长度!')
+                return None
+        index = 0
+        i = 0
+        attr_dict = dict(enumerate(target_json_model_instance))
+        while i < len(attr_dict):
+            field_attr = target_json_model_instance.get_field_by_sequence(i)
+            pack_data_type = field_attr[1].pack_to_type
+            byte_length = field_attr[1].byte_length
+            # 若属性是列表类型
+            if type(field_attr[1]) is ListField:
+                fields_list = list()
+                known_length = None
+                # 如果有依赖项，则说明是不定长列表，按列表指定长度一一解析。
+                if field_attr[1].depending_field:
+                    # 所依赖元素的值，就是列表的长度，获得列表长度
+                    depending_field_name = field_attr[1].depending_field
+                    depending_field = target_json_model_instance.get_field(depending_field_name)
+
+                    if isinstance(depending_field.value, int):
+                        known_length = depending_field.value
+                else:
+                    # 如果是定长列表，且列表里的元素都是同一类型。
+                    items_types = field_attr[1].items_types
+                    items_length = base_data_from_bytes.get_bytes_length(items_types)
+                    if items_length == 0:
+                        raise Exception('ERROR：列表元素的数据类型不是有效的数值类型！！！，field:{}'.format(field_attr[0]))
+                    items_num = byte_length / items_length
+                    if isinstance(items_num, int):
+                        for j in range(items_num):
+                            start_cursor = index + j * items_length
+                            tmp_bytes = bytes_str[start_cursor:start_cursor + items_length]
+                            tmp_value = base_data_from_bytes.base_from_bytes(items_types, tmp_bytes)
+                            fields_list.append(tmp_value)
+                    else:
+                        raise Exception('ERROR：列表的总长度，与列表类型和元素长度不匹配！,field:{}'.format(field_attr[0]))
+                # 如果列表是空列表
+                if known_length and known_length == 0:
+                    setattr(target_json_model_instance, field_attr[0], [])
+
+                elif known_length and known_length > 0:
+                    expected_byte_length = known_length * byte_length
+                    if len(bytes_str[index:]) < expected_byte_length:
+                        print('ERROR：剩余字节长度小于期望长度！field:{}, sequence'.format(field_attr[0], field_attr[1].sequence))
+                        raise Exception('ERROR：剩余字节长度小于期望长度！')
+                    counter = known_length
+                    while counter > 0:
+
+                        temp_model_bytes = bytes_str[index:index + byte_length]
+                        index += byte_length
+                        # 如果列表中的元素是Base model类的数组：
+                        if issubclass(field_attr[1].items_types[0], Base):
+                            obj_item_model_instance = field_attr[1].items_types[0]()
+                            obj_item_model_instance.load_from_bytes(obj_item_model_instance, temp_model_bytes)
+                            fields_list.append(obj_item_model_instance)
+                        else:
+                            raise Exception('ERROR：未能识别的json model 类型，field ={}'.format(field_attr[0]))
+                        counter -= 1
+                    setattr(target_json_model_instance, field_attr[0], fields_list)
+                else:
+                    print('ERROR：未指定列表元素的数量,或数量是负值，length ={}'.format(known_length))
+                    raise Exception('ERROR：未指定列表元素的数量，length ={}'.format(known_length))
+
+            # 若属性是model类型
+            elif type(field_attr[1]) is EmbeddedField:
+                byte_str = bytes_str[index:index + byte_length]
+                tep_value = field_attr[1].load_from_bytes(byte_str)
+                setattr(target_json_model_instance, field_attr[0], tep_value)
+            # 其余则属性是值类型的
+            else:
+                byte_str = bytes_str[index:index + byte_length]
+
+                value = base_data_from_bytes.base_from_bytes(pack_data_type, byte_str)
+                setattr(target_json_model_instance, field_attr[0], value)
+            index += byte_length
+            i += 1
 
     def __repr__(self):
         attrs = {}

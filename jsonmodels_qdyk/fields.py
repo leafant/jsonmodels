@@ -7,7 +7,7 @@ from weakref import WeakKeyDictionary
 import six
 from dateutil.parser import parse
 
-from jsonmodels_qdyk import models
+from jsonmodels_qdyk import models, base_data_from_bytes
 from jsonmodels_qdyk.base_data_convert_2_bytes import base_to_bytes
 from .errors import ValidationError
 from .collections import ModelCollection
@@ -41,12 +41,26 @@ class BaseField(object):
             min_value=None,
             max_value=None,
             default_value=None,
+            value=None,
+
+            # 打包成的目标数据类型，参看 base_data_convert_2_bytes.py
             pack_to_type=None,
             byte_value=None,
+            # 转换成bytes之后的长度，就是byte的字节数。
+            byte_length=None,
             hex_value=None,
+            # 是否是小端
             is_little_endian=False,
-            sequence = 0,
-            depending_field = None
+            # 序列号
+            sequence=0,
+            # 依赖的父亲属性
+            depending_field=None,
+
+            # 数据偏转因子 * （乘积因子）
+            data_factor=1,
+
+            # 数据偏移量, ＋（累加偏移量）
+            data_offset=0
         ):
         # cached_bytes add by gloria
         self.cached_bytes = WeakKeyDictionary()
@@ -62,6 +76,8 @@ class BaseField(object):
         self.max_value = max_value
         # add by gloria
         self.min_value = min_value
+        # 值类型的值
+        self.value = value
         # 用于表示属性的序列，打包bytes时需要。
         self.sequence = sequence
 
@@ -76,11 +92,17 @@ class BaseField(object):
             self.byte_value = base_to_bytes(self.pack_to_type, default_value, self.is_little_endian)
         else:
             self.byte_value = byte_value
+        if byte_length:
+            self.byte_length = byte_length
+        else:
+            self.byte_length = base_data_from_bytes.get_bytes_length(pack_to_type)
         self.hex_value = hex_value
         self._validate_name()
         if default is not NotSet:
             self.validate(default)
         self._default = default
+        self.data_factor = data_factor
+        self.data_offset = data_offset
 
     @property
     def has_default(self):
@@ -100,7 +122,6 @@ class BaseField(object):
             tmp_bytes_list = list()
             for list_item in value:
                 brother_classes = models.Base.__subclasses__()
-                c = type(list_item)
                 # 打包数据类型不是List，且不是models.Base的子类.这里只打包非引用类型的数据。如：str，int, float
                 if self.pack_to_type != 'LIST' and type(list_item) not in brother_classes:
                     tmp_bytes = base_to_bytes(self.pack_to_type, list_item, self.is_little_endian)
@@ -118,6 +139,8 @@ class BaseField(object):
             self.memory[instance._cache_key] = value
             self.to_bytes(instance)
             self.cached_bytes[instance._cache_key] = self.byte_value
+            # 只给值类型的属性赋值
+            self.value = value
 
     def __get__(self, instance, owner=None):
         if instance is None:
@@ -200,6 +223,21 @@ class BaseField(object):
                 self.byte_value = base_to_bytes(self.pack_to_type, value, self.is_little_endian)
         # else:
         #     print('Warning!!!, self.pack_to_type is None, please init it in model *.py files')
+
+    # add by gloria
+    def from_bytes_to_value(self, instance):
+        """
+        get the bytes of current filed value.
+        the value of self.pack_to_type is "FLOATSTRING","FLOATDOUBLE","FLOAT","BOOL","BYTE", "STRING", "WORD", "DWORD", "INT","BYTESDECIMAL"
+        :return:
+        """
+        if self.pack_to_type:
+            value = self.__get__(instance)
+
+            if (value is None) or value == '':
+                self.byte_value = b''
+            else:
+                self.byte_value = base_to_bytes(self.pack_to_type, value, self.is_little_endian)
 
     # add by gloria
     def bytes_str(self, parent_json_model):

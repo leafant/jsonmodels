@@ -195,6 +195,13 @@ def unsigned_long_2_bytes(value,  is_little_endian=False):
     return struct.pack('>Q', value)
 
 
+def three_bytes_2_int(value,  is_little_endian=False):
+    if is_little_endian:
+        return value.to_bytes(3, "little")
+    else:
+        return value.to_bytes(3, "big")
+
+
 def none_data_type(value, is_little_endian=False):
     """
     对非特定数据类型的处理
@@ -221,7 +228,8 @@ data_to_bytes_methods = {"FLOATSTRING": float_string_2_bytes,
                          "LONG": long_2_bytes,
                          "BYTESDECIMAL": bytes_to_decimal_bytes,
                          "UNSIGNEDINT": unsigned_int_2_bytes,
-                         "TIMESTAMP": unsigned_long_2_bytes
+                         "TIMESTAMP": unsigned_long_2_bytes,
+                         "3BYTESINT": three_bytes_2_int,
                          }
 
 
