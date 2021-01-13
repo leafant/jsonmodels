@@ -16,7 +16,7 @@ def bytes_2_string(bytes_string, is_little_endian=False):
     :param is_little_endian:
     :return:
     """
-    str_value = bytes.decode(bytes_string)
+    str_value = bytes.decode(bytes_string, encoding='utf-8')
 
     return str_value
 
@@ -42,7 +42,7 @@ def bytes_2_bool(bool_bytes_string, is_little_endian=False):
     :param is_little_endian:
     :return:
     """
-    return struct.unpack('?', bool_bytes_string)
+    return struct.unpack('?', bool_bytes_string)[0]
 
 
 def byte_2_int(byte_string, is_little_endian=False):
@@ -53,8 +53,8 @@ def byte_2_int(byte_string, is_little_endian=False):
     :return:
     """
     if is_little_endian:
-        return struct.unpack('<B', byte_string)
-    return struct.unpack('>B', byte_string)
+        return struct.unpack('<B', byte_string)[0]
+    return struct.unpack('>B', byte_string)[0]
 
 
 def word_2_int(word_byte_string, is_little_endian=False):
@@ -65,8 +65,8 @@ def word_2_int(word_byte_string, is_little_endian=False):
     :return:
     """
     if is_little_endian:
-        return struct.unpack('<h', word_byte_string)
-    return struct.unpack('>h', word_byte_string)
+        return struct.unpack('<h', word_byte_string)[0]
+    return struct.unpack('>h', word_byte_string)[0]
 
 
 def bytes_2_ushort(ushort_bytes_string, is_little_endian=False):
@@ -77,8 +77,8 @@ def bytes_2_ushort(ushort_bytes_string, is_little_endian=False):
     :return:
     """
     if is_little_endian:
-        return struct.unpack('<H', ushort_bytes_string)
-    return struct.unpack('>H', ushort_bytes_string)
+        return struct.unpack('<H', ushort_bytes_string)[0]
+    return struct.unpack('>H', ushort_bytes_string)[0]
 
 
 def dword_2_long(dword_bytes_string, is_little_endian=False):
@@ -89,8 +89,8 @@ def dword_2_long(dword_bytes_string, is_little_endian=False):
     :return:
     """
     if is_little_endian:
-        return struct.unpack('<L', dword_bytes_string)
-    return struct.unpack('>L', dword_bytes_string)
+        return struct.unpack('<L', dword_bytes_string)[0]
+    return struct.unpack('>L', dword_bytes_string)[0]
 
 
 def bytes_2_int(int_bytes_string, is_little_endian=False):
@@ -102,9 +102,9 @@ def bytes_2_int(int_bytes_string, is_little_endian=False):
     """
     # 小端数据返回
     if is_little_endian:
-        return struct.unpack('<i', int_bytes_string)
+        return struct.unpack('<i', int_bytes_string)[0]
     # 大端数据返回
-    return struct.unpack('>i', int_bytes_string)
+    return struct.unpack('>i', int_bytes_string)[0]
 
 
 def bytes_2_long(long_bytes_string, is_little_endian=False):
@@ -116,9 +116,9 @@ def bytes_2_long(long_bytes_string, is_little_endian=False):
     """
     # 小端数据返回
     if is_little_endian:
-        return struct.unpack('<q', long_bytes_string)
+        return struct.unpack('<q', long_bytes_string)[0]
     # 大端数据返回
-    return struct.unpack('>q', long_bytes_string)
+    return struct.unpack('>q', long_bytes_string)[0]
 
 
 def bytes_2_float(bytes_float_string, is_little_endian=False):
@@ -130,9 +130,9 @@ def bytes_2_float(bytes_float_string, is_little_endian=False):
     """
     # 小端数据返回
     if is_little_endian:
-        return struct.unpack('<f', bytes_float_string)
+        return struct.unpack('<f', bytes_float_string)[0]
     # 大端数据返回
-    return struct.unpack('>f', bytes_float_string)
+    return struct.unpack('>f', bytes_float_string)[0]
 
 
 def bytes_2_double(bytes_double_string, is_little_endian=False):
@@ -144,9 +144,9 @@ def bytes_2_double(bytes_double_string, is_little_endian=False):
     """
     # 小端数据返回
     if is_little_endian:
-        return struct.unpack('<d', bytes_double_string)
+        return struct.unpack('<d', bytes_double_string)[0]
     # 大端数据返回
-    return struct.unpack('>d', bytes_double_string)
+    return struct.unpack('>d', bytes_double_string)[0]
 
 
 def bytes_to_decimal_string(bytes_decimal_str, is_little_endian=False):
@@ -179,9 +179,9 @@ def bytes_2_unsigned_int(bytes_string, is_little_endian=False):
     """
     # 小端数据返回
     if is_little_endian:
-        return struct.unpack('<I', bytes_string)
+        return struct.unpack('<I', bytes_string)[0]
     # 大端数据返回
-    return struct.unpack('>I', bytes_string)
+    return struct.unpack('>I', bytes_string)[0]
 
 
 def bytes_2_unsigned_long(bytes_long_string,  is_little_endian=False):
@@ -193,9 +193,9 @@ def bytes_2_unsigned_long(bytes_long_string,  is_little_endian=False):
     """
     # 小端数据返回
     if is_little_endian:
-        return struct.unpack('<Q', bytes_long_string)
+        return struct.unpack('<Q', bytes_long_string)[0]
     # 大端数据返回
-    return struct.unpack('>Q', bytes_long_string)
+    return struct.unpack('>Q', bytes_long_string)[0]
 
 
 def three_bytes_2_int(bytes_string,  is_little_endian=False):
