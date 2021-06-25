@@ -121,13 +121,16 @@ class BaseField(object):
             self.memory[instance._cache_key] = value
             tmp_bytes_list = list()
             for list_item in value:
-                brother_classes = models.Base.__subclasses__()
-                # 打包数据类型不是List，且不是models.Base的子类.这里只打包非引用类型的数据。如：str，int, float
-                if self.pack_to_type != 'LIST' and type(list_item) not in brother_classes:
-                    tmp_bytes = base_to_bytes(self.pack_to_type, list_item, self.is_little_endian)
+                # 打包数据类型是非引用类型的数据。如：str，int, float
+                if isinstance(list_item, int) or isinstance(list_item, float) or isinstance(list_item, str):
+                    if not self.item_type:
+                        raise Exception('列表元素是值类型的，请指定item_type属性')
+                    tmp_bytes = base_to_bytes(self.item_type, list_item, self.is_little_endian)
                     tmp_bytes_list.append(tmp_bytes)
             if len(tmp_bytes_list) > 0:
                 self.byte_value = b''.join(tmp_bytes_list)
+            else:
+                self.byte_value = b''
 
         # 如果当前field是 jsonmodel，即EmbeddedField
         elif models.Base in ancestors:
@@ -350,7 +353,7 @@ class ListField(BaseField):
 
     types = (list,)
 
-    def __init__(self, items_types=None, *args, **kwargs):
+    def __init__(self, items_types=None, item_type=None, item_num=None, *args, **kwargs):
         """Init.
 
         `ListField` is **always not required**. If you want to control number
@@ -360,6 +363,8 @@ class ListField(BaseField):
         self._assign_types(items_types)
         super(ListField, self).__init__(*args, **kwargs)
         self.required = False
+        self.item_type = item_type
+        self.item_num = item_num
 
     def get_default_value(self):
         default = super(ListField, self).get_default_value()

@@ -1,4 +1,3 @@
-
 import json
 import six
 
@@ -29,13 +28,12 @@ class JsonmodelMeta(type):
 
 
 class Base(six.with_metaclass(JsonmodelMeta, object)):
-
     """Base class for all models."""
     # 协议中的数据类型和数据版本
     data_type = None
     data_version = None
     json_data_file = None
-    
+
     def __init__(self, json_file=None, length=None, **kwargs):
         self._cache_key = _CacheKey()
         self.populate(**kwargs)
@@ -61,6 +59,16 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
                 return field
 
         raise errors.FieldNotFound('Field not found', field_name)
+
+    # add by gloria
+    def get_field_by_type(self, field_type):
+        """Get field associated with given attribute by filed type."""
+        tmp_list = list()
+        for attr_name, field in self:
+            if type(field) == field_type:
+                tmp_list.append(field)
+
+        return tmp_list
 
     # add by gloria
     def get_field_by_sequence(self, sequence_index):
@@ -145,7 +153,8 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
                 if field[1].default_value is not None:
                     setattr(self, field[0], field[1].default_value)
                 else:
-                    print('This attribute:{} not been set default value both in model class and json file.'.format(field))
+                    print(
+                        'This attribute:{} not been set default value both in model class and json file.'.format(field))
             else:
                 # 若属性是列表类型
                 if type(field[1]) is ListField:
@@ -248,12 +257,14 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
 
             # 如果属性是列表
             if type(field[1]) is ListField:
-                brother_classes = Base.__subclasses__()
+                # brother_classes = Base.__subclasses__()
                 list_items = getattr(self, field[0])
                 if len(list_items) == 0:
                     temp_bytes_dict[field[1].sequence] = b''
+                    continue
                 # 如果列表中只是值属性,非json model属性
-                elif field[1].pack_to_type != 'LIST' and type(list_items[0]) not in brother_classes:
+                elif isinstance(list_items[0], int) or isinstance(list_items[0], float) or isinstance(
+                        list_items[0], str):
                     temp_bytes_dict[field[1].sequence] = field[1].byte_value
                 # 如果列表中的内容是jsonmodel 属性。
                 else:
@@ -347,8 +358,117 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
         cls.load_from_bytes(target_json_model_instance, bytes_str)
         return target_json_model_instance.to_struct()
 
-    @classmethod
+    # @classmethod
     # add by gloria
+    # def load_from_bytes(cls, target_json_model_instance, bytes_str):
+    #     """
+    #     给定目标json model实例及bytes strng，返回解析后的json model实例。
+    #     :param target_json_model_instance: 协议中规定的数据类别
+    #     :param bytes_str: bytes字符串
+    #     :return: 跟协议数据结构一致的json字典。
+    #     """
+    #     if len(bytes_str) <= 0:
+    #         print('WARNING: The input parameters length is 0!')
+    #         return None
+    #     if target_json_model_instance.length:
+    #         if len(bytes_str) < target_json_model_instance.length:
+    #             print('WARNING: 输入bytes的长度小于即将被解析对象的最小长度!')
+    #             return None
+    #     index = 0
+    #     i = 0
+    #     attr_dict = dict(enumerate(target_json_model_instance))
+    #     while i < len(attr_dict):
+    #         field_attr = target_json_model_instance.get_field_by_sequence(i)
+    #         pack_data_type = field_attr[1].pack_to_type
+    #         # 非值类型的属性的byte_length=0.
+    #         byte_length = field_attr[1].byte_length
+    #         # 若属性是列表类型
+    #         if type(field_attr[1]) is ListField:
+    #             fields_list = list()
+    #             known_length = None
+    #             # 如果有依赖项，则说明是不定长列表，按列表指定长度一一解析。
+    #             if field_attr[1].depending_field:
+    #                 # 所依赖元素的值，就是列表的长度，获得列表长度
+    #                 depending_field_name = field_attr[1].depending_field
+    #                 depending_field = target_json_model_instance.get_field(depending_field_name)
+    #
+    #                 if isinstance(depending_field.value, int):
+    #                     known_length = depending_field.value
+    #                 else:
+    #                     raise Exception('ERROR：列表长度前向依赖项的值不是整数值！！！，field:{}'.format(field_attr[0]))
+    #
+    #             item_type = field_attr[1].item_type
+    #             item_length = base_data_from_bytes.get_bytes_length(item_type)
+    #             item_num = field_attr[1].item_num
+    #
+    #             # 如果没有依赖长度限制或有固定长标识（item_num），是定长列表，且元素类型是数值类型。
+    #             if known_length is None:
+    #                 # 如果是定长列表，且列表里的元素都是同一类型。
+    #                 if item_length == 0:
+    #                     raise Exception('ERROR：列表元素的数据类型item_type不是有效的数值类型！！！，field:{}'.format(field_attr[0]))
+    #                 # 如果未指定item数量，则计算获得。
+    #                 if item_num is None:
+    #                     item_num = item_length / item_length
+    #                 if isinstance(item_num, int):
+    #                     for j in range(item_num):
+    #                         start_cursor = index + j * item_length
+    #                         tmp_bytes = bytes_str[start_cursor:start_cursor + item_length]
+    #                         tmp_value = base_data_from_bytes.base_from_bytes(item_type, tmp_bytes)
+    #                         fields_list.append(tmp_value)
+    #                     setattr(target_json_model_instance, field_attr[0], fields_list)
+    #                 else:
+    #                     raise Exception('ERROR：列表的总长度，与列表类型和元素长度不匹配！,field:{}'.format(field_attr[0]))
+    #             # 如果列表是空列表
+    #             elif known_length == 0:
+    #                 setattr(target_json_model_instance, field_attr[0], [])
+    #             # 如果是变长的数值元素列表。
+    #             elif known_length > 0 and item_length > 0:
+    #                 for j in range(known_length):
+    #                     start_cursor = index + j * item_length
+    #                     tmp_bytes = bytes_str[start_cursor:start_cursor + item_length]
+    #                     tmp_value = base_data_from_bytes.base_from_bytes(item_type, tmp_bytes)
+    #                     fields_list.append(tmp_value)
+    #                 setattr(target_json_model_instance, field_attr[0], fields_list)
+    #
+    #             # 如果是变长列表，且列表中的元素是json model。
+    #             elif known_length > 0 and item_length == 0:
+    #                 if byte_length == 0:
+    #                     raise Exception('ERROR：未指定列表非值对象元素的长度byte_length！,field:{}'.format(field_attr[0]))
+    #                 expected_byte_length = known_length * byte_length
+    #                 if len(bytes_str[index:]) < expected_byte_length:
+    #                     print('ERROR：剩余字节长度小于期望长度！field:{}, sequence'.format(field_attr[0], field_attr[1].sequence))
+    #                     raise Exception('ERROR：剩余字节长度小于期望长度！')
+    #                 counter = known_length
+    #                 while counter > 0:
+    #                     temp_model_bytes = bytes_str[index:index + byte_length]
+    #                     index += byte_length
+    #                     # 如果列表中的元素是Base model类的数组：
+    #                     if issubclass(field_attr[1].items_types[0], Base):
+    #                         obj_item_model_instance = field_attr[1].items_types[0]()
+    #                         obj_item_model_instance.load_from_bytes(obj_item_model_instance, temp_model_bytes)
+    #                         fields_list.append(obj_item_model_instance)
+    #                     else:
+    #                         raise Exception('ERROR：未能识别的json model 类型，field ={}'.format(field_attr[0]))
+    #                     counter -= 1
+    #                 setattr(target_json_model_instance, field_attr[0], fields_list)
+    #             else:
+    #                 print('ERROR：未指定列表元素的数量,或数量是负值，length ={}'.format(known_length))
+    #                 raise Exception('ERROR：未指定列表元素的数量，length ={}'.format(known_length))
+    #
+    #         # 若属性是model类型
+    #         elif type(field_attr[1]) is EmbeddedField:
+    #             byte_str = bytes_str[index:index + byte_length]
+    #             tep_value = field_attr[1].load_from_bytes(byte_str)
+    #             setattr(target_json_model_instance, field_attr[0], tep_value)
+    #         # 其余则属性是值类型的
+    #         else:
+    #             byte_str = bytes_str[index:index + byte_length]
+    #             value = base_data_from_bytes.base_from_bytes(pack_data_type, byte_str)
+    #             setattr(target_json_model_instance, field_attr[0], value)
+    #         index += byte_length
+    #         i += 1
+
+    @classmethod
     def load_from_bytes(cls, target_json_model_instance, bytes_str):
         """
         给定目标json model实例及bytes strng，返回解析后的json model实例。
@@ -365,10 +485,12 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
                 return None
         index = 0
         i = 0
+        l = len(bytes_str)
         attr_dict = dict(enumerate(target_json_model_instance))
         while i < len(attr_dict):
             field_attr = target_json_model_instance.get_field_by_sequence(i)
             pack_data_type = field_attr[1].pack_to_type
+            # 非值类型的属性的byte_length=0.
             byte_length = field_attr[1].byte_length
             # 若属性是列表类型
             if type(field_attr[1]) is ListField:
@@ -382,35 +504,56 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
 
                     if isinstance(depending_field.value, int):
                         known_length = depending_field.value
-                else:
+                    else:
+                        raise Exception('ERROR：列表长度前向依赖项的值不是整数值！！！，field:{}'.format(field_attr[0]))
+
+                item_type = field_attr[1].item_type
+                item_length = base_data_from_bytes.get_bytes_length(item_type)
+                item_num = field_attr[1].item_num
+
+                # 如果没有依赖长度限制或有固定长标识（item_num），是定长列表，且元素类型是数值类型。
+                if known_length is None:
                     # 如果是定长列表，且列表里的元素都是同一类型。
-                    items_types = field_attr[1].items_types
-                    items_length = base_data_from_bytes.get_bytes_length(items_types)
-                    if items_length == 0:
-                        raise Exception('ERROR：列表元素的数据类型不是有效的数值类型！！！，field:{}'.format(field_attr[0]))
-                    items_num = byte_length / items_length
-                    if isinstance(items_num, int):
-                        for j in range(items_num):
-                            start_cursor = index + j * items_length
-                            tmp_bytes = bytes_str[start_cursor:start_cursor + items_length]
-                            tmp_value = base_data_from_bytes.base_from_bytes(items_types, tmp_bytes)
+                    if item_length == 0:
+                        raise Exception('ERROR：列表元素的数据类型item_type不是有效的数值类型！！！，field:{}'.format(field_attr[0]))
+                    # 如果未指定item数量，则计算获得。
+                    if item_num is None:
+                        item_num = item_length / item_length
+                    if isinstance(item_num, int):
+                        for j in range(item_num):
+                            start_cursor = index + j * item_length
+                            tmp_bytes = bytes_str[start_cursor:start_cursor + item_length]
+                            tmp_value = base_data_from_bytes.base_from_bytes(item_type, tmp_bytes)
                             fields_list.append(tmp_value)
+                        setattr(target_json_model_instance, field_attr[0], fields_list)
+                        byte_length = item_num * item_length
                     else:
                         raise Exception('ERROR：列表的总长度，与列表类型和元素长度不匹配！,field:{}'.format(field_attr[0]))
                 # 如果列表是空列表
-                if known_length and known_length == 0:
+                elif known_length == 0:
                     setattr(target_json_model_instance, field_attr[0], [])
+                # 如果是变长的数值元素列表。
+                elif known_length > 0 and item_length > 0:
+                    for j in range(known_length):
+                        start_cursor = index + j * item_length
+                        tmp_bytes = bytes_str[start_cursor:start_cursor + item_length]
+                        tmp_value = base_data_from_bytes.base_from_bytes(item_type, tmp_bytes)
+                        fields_list.append(tmp_value)
+                    setattr(target_json_model_instance, field_attr[0], fields_list)
 
-                elif known_length and known_length > 0:
+                # 如果是变长列表，且列表中的元素是json model。
+                elif known_length > 0 and item_length == 0:
+                    if byte_length == 0:
+                        raise Exception('ERROR：未指定列表非值对象元素的长度byte_length！,field:{}'.format(field_attr[0]))
                     expected_byte_length = known_length * byte_length
                     if len(bytes_str[index:]) < expected_byte_length:
                         print('ERROR：剩余字节长度小于期望长度！field:{}, sequence'.format(field_attr[0], field_attr[1].sequence))
                         raise Exception('ERROR：剩余字节长度小于期望长度！')
                     counter = known_length
-                    while counter > 0:
-
-                        temp_model_bytes = bytes_str[index:index + byte_length]
-                        index += byte_length
+                    j = 0
+                    while j < counter:
+                        temp_model_bytes = bytes_str[index + j * byte_length:index + (j + 1) * byte_length]
+                        # index += byte_length
                         # 如果列表中的元素是Base model类的数组：
                         if issubclass(field_attr[1].items_types[0], Base):
                             obj_item_model_instance = field_attr[1].items_types[0]()
@@ -418,8 +561,9 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
                             fields_list.append(obj_item_model_instance)
                         else:
                             raise Exception('ERROR：未能识别的json model 类型，field ={}'.format(field_attr[0]))
-                        counter -= 1
+                        j += 1
                     setattr(target_json_model_instance, field_attr[0], fields_list)
+                    byte_length = counter * byte_length
                 else:
                     print('ERROR：未指定列表元素的数量,或数量是负值，length ={}'.format(known_length))
                     raise Exception('ERROR：未指定列表元素的数量，length ={}'.format(known_length))
@@ -427,12 +571,12 @@ class Base(six.with_metaclass(JsonmodelMeta, object)):
             # 若属性是model类型
             elif type(field_attr[1]) is EmbeddedField:
                 byte_str = bytes_str[index:index + byte_length]
-                tep_value = field_attr[1].load_from_bytes(byte_str)
+                obj_model_instance = field_attr[1].types[0]()
+                tep_value = obj_model_instance.load_from_bytes(obj_model_instance, byte_str)
                 setattr(target_json_model_instance, field_attr[0], tep_value)
             # 其余则属性是值类型的
             else:
                 byte_str = bytes_str[index:index + byte_length]
-
                 value = base_data_from_bytes.base_from_bytes(pack_data_type, byte_str)
                 setattr(target_json_model_instance, field_attr[0], value)
             index += byte_length

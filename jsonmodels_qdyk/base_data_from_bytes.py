@@ -245,6 +245,8 @@ def base_from_bytes(data_type, value, is_little_endian=False):
     :param is_little_endian:数据是否是小端。
     :return: hex字符串。
     """
+    if data_type == b'':
+        return b''
     base_value = data_from_bytes_methods.get(data_type, none_data_type)(value, is_little_endian=is_little_endian)
     return base_value
 
@@ -282,7 +284,7 @@ def get_bytes_length(data_type):
     if data_type == "UNSIGNEDINT":
         return 4
     if data_type == "TIMESTAMP":
-        return 6
+        return 8
     if data_type == "3BYTESINT":
         return 3
     return 0
